@@ -1,6 +1,9 @@
 name: Build and Release V2
 
 on:
+  push:
+    branches:
+      - master
   workflow_dispatch:
     inputs:
       build_name:
@@ -26,6 +29,9 @@ on:
 
 run-name: ${{ inputs.build_name }}
 
+permissions:
+  contents: write
+
 defaults:
   run:
     shell: bash
@@ -36,6 +42,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       app_ver: ${{ steps.get_ver.outputs.app_ver }}
+      release_tag: ${{ steps.get_ver.outputs.release_tag }}
       sha256: ${{ steps.get_hash.outputs.hash_output }}
 
     steps:
@@ -49,6 +56,11 @@ jobs:
       run: |
         tp_ver=$(grep -w '__version__' './tinypedal/version.py' | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+')
         echo "app_ver=${tp_ver}" >> $GITHUB_OUTPUT
+        if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+          echo "release_tag=v${tp_ver}-commit-${GITHUB_SHA}" >> $GITHUB_OUTPUT
+        else
+          echo "release_tag=v${tp_ver}" >> $GITHUB_OUTPUT
+        fi
         echo "TinyPedal Version:" $tp_ver
 
     - name: ZIP Linux file
@@ -70,7 +82,7 @@ jobs:
         draft: ${{ inputs.draft_release }}
         prerelease: ${{ inputs.prerelease }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: v${{ steps.get_ver.outputs.app_ver }}
+        tag_name: ${{ steps.get_ver.outputs.release_tag }}
         files: |
           TinyPedal-${{ steps.get_ver.outputs.app_ver }}-linux.zip
 
@@ -123,7 +135,7 @@ jobs:
         draft: ${{ inputs.draft_release }}
         prerelease: ${{ inputs.prerelease }}
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: v${{ needs.linux.outputs.app_ver }}
+        tag_name: ${{ needs.linux.outputs.release_tag }}
         files: |
           TinyPedal-${{ needs.linux.outputs.app_ver }}-windows.zip
 
@@ -154,4 +166,4 @@ jobs:
         prerelease: ${{ inputs.prerelease }}
         body_path: release.txt
         token: ${{ secrets.GITHUB_TOKEN }}
-        tag_name: v${{ needs.linux.outputs.app_ver }}
+        tag_name: ${{ needs.linux.outputs.release_tag }}
