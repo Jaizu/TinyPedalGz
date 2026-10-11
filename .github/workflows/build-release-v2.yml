@@ -1,4 +1,4 @@
-name: Build and Release V2
+name: Build Development Release
 
 on:
   push:
@@ -6,28 +6,13 @@ on:
       - master
   workflow_dispatch:
     inputs:
-      build_name:
-        description: "Build name"
-        default: ""
-        required: false
-        type: string
-      draft_release:
-        description: "Draft release"
-        default: true
-        required: true
-        type: boolean
-      prerelease:
-        description: "Prerelease"
-        default: false
-        required: false
-        type: boolean
       test_build:
         description: "Test build"
         default: false
         required: false
         type: boolean
 
-run-name: ${{ inputs.build_name }}
+run-name: TinyPedal dev build (${{ github.sha }})
 
 permissions:
   contents: write
@@ -41,8 +26,8 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     outputs:
-      app_ver: ${{ steps.get_ver.outputs.app_ver }}
       release_tag: ${{ steps.get_ver.outputs.release_tag }}
+      short_sha: ${{ steps.get_ver.outputs.short_sha }}
       sha256: ${{ steps.get_hash.outputs.hash_output }}
 
     steps:
@@ -54,24 +39,20 @@ jobs:
     - name: Fetch version number
       id: get_ver
       run: |
-        tp_ver=$(grep -w '__version__' './tinypedal/version.py' | grep -o -E '[0-9]+\.[0-9]+\.[0-9]+')
-        echo "app_ver=${tp_ver}" >> $GITHUB_OUTPUT
-        if [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
-          echo "release_tag=v${tp_ver}-commit-${GITHUB_SHA}" >> $GITHUB_OUTPUT
-        else
-          echo "release_tag=v${tp_ver}" >> $GITHUB_OUTPUT
-        fi
-        echo "TinyPedal Version:" $tp_ver
+        short_sha="${GITHUB_SHA:0:12}"
+        echo "short_sha=${short_sha}" >> $GITHUB_OUTPUT
+        echo "release_tag=dev-${short_sha}" >> $GITHUB_OUTPUT
+        echo "Development build for commit: ${GITHUB_SHA}"
 
     - name: ZIP Linux file
       run: |
-        file_name=TinyPedal-${{ steps.get_ver.outputs.app_ver }}-linux.zip
+        file_name=TinyPedal-dev-${{ steps.get_ver.outputs.short_sha }}-linux.zip
         zip -r $file_name . -x *.git/* -x *.github/*
 
     - name: Check hash sum
       id: get_hash
       run: |
-        sha256hash=$(sha256sum TinyPedal-${{ steps.get_ver.outputs.app_ver }}-linux.zip)
+        sha256hash=$(sha256sum TinyPedal-dev-${{ steps.get_ver.outputs.short_sha }}-linux.zip | awk '{print $1}')
         echo "hash_output=${sha256hash}" >> $GITHUB_OUTPUT
         echo $sha256hash
 
@@ -79,12 +60,13 @@ jobs:
       uses: softprops/action-gh-release@v3
       if: ${{ !inputs.test_build }}
       with:
-        draft: ${{ inputs.draft_release }}
-        prerelease: ${{ inputs.prerelease }}
+        name: TinyPedal dev ${{ steps.get_ver.outputs.short_sha }}
+        prerelease: true
+        make_latest: false
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: ${{ steps.get_ver.outputs.release_tag }}
         files: |
-          TinyPedal-${{ steps.get_ver.outputs.app_ver }}-linux.zip
+          TinyPedal-dev-${{ steps.get_ver.outputs.short_sha }}-linux.zip
 
   # Create windows release file
   windows:
@@ -118,13 +100,13 @@ jobs:
     - name: ZIP Windows file
       shell: pwsh
       run: |
-        $file_name="TinyPedal-${{ needs.linux.outputs.app_ver }}-windows.zip"
+        $file_name="TinyPedal-dev-${{ needs.linux.outputs.short_sha }}-windows.zip"
         Compress-Archive -Path ./dist/TinyPedal -DestinationPath ./$file_name
 
     - name: Check hash sum
       id: get_hash
       run: |
-        sha256hash=$(sha256sum TinyPedal-${{ needs.linux.outputs.app_ver }}-windows.zip | sed 's/\*//g')
+        sha256hash=$(sha256sum TinyPedal-dev-${{ needs.linux.outputs.short_sha }}-windows.zip | awk '{print $1}')
         echo "hash_output=${sha256hash}" >> $GITHUB_OUTPUT
         echo $sha256hash
 
@@ -132,12 +114,13 @@ jobs:
       uses: softprops/action-gh-release@v3
       if: ${{ !inputs.test_build }}
       with:
-        draft: ${{ inputs.draft_release }}
-        prerelease: ${{ inputs.prerelease }}
+        name: TinyPedal dev ${{ needs.linux.outputs.short_sha }}
+        prerelease: true
+        make_latest: false
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: ${{ needs.linux.outputs.release_tag }}
         files: |
-          TinyPedal-${{ needs.linux.outputs.app_ver }}-windows.zip
+          TinyPedal-dev-${{ needs.linux.outputs.short_sha }}-windows.zip
 
   # Generate release notes
   release-notes:
@@ -150,20 +133,27 @@ jobs:
 
     - name: Get latest change log
       run: |
+        echo "Development build for commit ${GITHUB_SHA}" > release.txt
+        echo >> release.txt
         prev_line_num=$(grep -n "^\----*$" "./docs/changelog.txt" | sed -n "2,2p" | sed 's/[\:\-]//g')
         sed -n "1,$(expr $prev_line_num - 2)p" "./docs/changelog.txt" >> release.txt
         echo "Hash sum" >> release.txt
         echo "---" >> release.txt
-        echo "SHA256:" ${{ needs.linux.outputs.sha256 }} >> release.txt
-        echo "SHA256:" ${{ needs.windows.outputs.sha256 }} >> release.txt
+        echo "Linux SHA256: ${{ needs.linux.outputs.sha256 }}" >> release.txt
+        echo "Windows SHA256: ${{ needs.windows.outputs.sha256 }}" >> release.txt
         cat release.txt
 
     - name: Update release notes
       uses: softprops/action-gh-release@v3
       if: ${{ !inputs.test_build }}
       with:
-        draft: ${{ inputs.draft_release }}
-        prerelease: ${{ inputs.prerelease }}
+        name: TinyPedal dev ${{ needs.linux.outputs.short_sha }}
+        prerelease: true
+        make_latest: false
         body_path: release.txt
         token: ${{ secrets.GITHUB_TOKEN }}
         tag_name: ${{ needs.linux.outputs.release_tag }}
+
+concurrency:
+  group: TinyPedal-dev-${{ github.sha }}
+  cancel-in-progress: false
