@@ -20,8 +20,10 @@
 Module & widget list view
 """
 
+import math
+
 from PySide2.QtCore import QPoint, QRect, QRectF, QSize, Qt, Slot
-from PySide2.QtGui import QColor, QIcon, QPainter
+from PySide2.QtGui import QColor, QPainter, QPainterPath, QPalette
 from PySide2.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -36,7 +38,6 @@ from PySide2.QtWidgets import (
 )
 
 from .. import app_signal, cfg
-from ..constant import FILE
 from ..formatter import format_module_name
 from ..module_control import ModuleControl
 from ._common import UIScaler
@@ -280,12 +281,38 @@ class ToggleSwitch(QCheckBox):
 
 
 class GearButton(QPushButton):
-    """Icon button using PNG from images folder"""
+    """Icon button drawing a theme-aware gear"""
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setIcon(QIcon(FILE.IMAGE_GEAR))
-        self.setIconSize(QSize(UIScaler.size(1.8), UIScaler.size(1.8)))
+        self.setFixedSize(QSize(UIScaler.size(2.3), UIScaler.size(2.3)))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(self.palette().color(QPalette.ButtonText))
+
+        radius = min(self.width(), self.height()) * 0.47
+        center_x = self.width() / 2
+        center_y = self.height() / 2
+        path = QPainterPath()
+        path.setFillRule(Qt.OddEvenFill)
+        points = ((0, 0.78), (6, 0.78), (6, 1), (22, 1), (22, 0.78), (45, 0.78))
+        for tooth in range(8):
+            base_angle = tooth * 45 - 90
+            for angle_offset, scale in points:
+                angle = math.radians(base_angle + angle_offset)
+                point_x = center_x + radius * scale * math.cos(angle)
+                point_y = center_y + radius * scale * math.sin(angle)
+                if path.elementCount() == 0:
+                    path.moveTo(point_x, point_y)
+                else:
+                    path.lineTo(point_x, point_y)
+        path.closeSubpath()
+        hole_radius = radius * 0.4
+        path.addEllipse(center_x - hole_radius, center_y - hole_radius, hole_radius * 2, hole_radius * 2)
+        painter.drawPath(path)
 
     def sizeHint(self) -> QSize:
         return QSize(UIScaler.size(2.3), UIScaler.size(2.3))

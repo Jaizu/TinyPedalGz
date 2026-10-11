@@ -29,8 +29,9 @@ from itertools import islice, zip_longest
 from typing import Callable, Mapping, Sequence
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QFontDatabase
+from PySide2.QtGui import QFont, QFontDatabase
 from PySide2.QtWidgets import (
+    QComboBox,
     QCompleter,
     QDialogButtonBox,
     QGridLayout,
@@ -45,7 +46,7 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
-from .. import cfg
+from .. import cfg, paths
 from .. import regex_pattern as rxp
 from ..constant import CONFIG
 from ..formatter import format_option_name
@@ -77,11 +78,40 @@ COLUMN_OPTION = 1
 COLUMN_COUNT = 4
 
 
-def get_font_list() -> list[str]:
-    """Get all available font families list"""
+def get_system_font_list() -> list[str]:
+    """Get all available system font families list"""
     if os.getenv("PYSIDE_OVERRIDE") == "6":  # no instance in qt6
         return QFontDatabase.families()  # type: ignore[call-arg]
     return QFontDatabase().families()
+
+
+def get_font_list(extra: str = "") -> list[str]:
+    """Get font list shown in dropdown, filtered by user fonts.txt (one name per line)
+
+    fonts.txt is generated from system fonts on first use; delete lines to hide fonts.
+    """
+    system_fonts = get_system_font_list()
+    filepath = f"{paths.global_config_path()}fonts.txt"
+    try:
+        if not os.path.exists(filepath):
+            with open(filepath, "w", encoding="utf-8") as fobj:
+                fobj.write("\n".join(system_fonts) + "\n")
+            fonts = system_fonts
+        else:
+            with open(filepath, "r", encoding="utf-8") as fobj:
+                allowed = {line.strip() for line in fobj if line.strip()}
+            fonts = [name for name in system_fonts if name in allowed] or system_fonts
+    except OSError:
+        fonts = system_fonts
+    if extra and extra not in fonts:  # keep currently used font selectable
+        fonts = [extra, *fonts]
+    return fonts
+
+
+def set_font_preview(combo: QComboBox, start: int = 0):
+    """Render each item name with its own font"""
+    for index in range(start, combo.count()):
+        combo.setItemData(index, QFont(combo.itemText(index)), Qt.FontRole)
 
 
 @singleton_dialog(CONFIG.TYPE_CONFIG)
@@ -101,6 +131,7 @@ class FontConfig(BaseDialog):
         self.edit_fontname = DropDownListEdit(self)
         self.edit_fontname.addItem("no change")
         self.edit_fontname.addItems(get_font_list())
+        set_font_preview(self.edit_fontname, 1)
         self.edit_fontname.setFixedWidth(UIScaler.size(9))
 
         self.edit_fontsize = QSpinBox(self)
@@ -463,7 +494,11 @@ class UserConfig(BaseDialog):
                 continue
             # Font name string
             if re.search(rxp.CFG_FONT_NAME, key):
-                self._add_option_combolist(current_row, key, layout, get_font_list())
+                self._add_option_combolist(
+                    current_row, key, layout,
+                    get_font_list(str(self.user_setting[self.key_name][key])),
+                    preview=True,
+                )
                 continue
             # Heatmap string
             if re.search(rxp.CFG_HEATMAP, key):
@@ -552,11 +587,13 @@ class UserConfig(BaseDialog):
         layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
-    def _add_option_combolist(self, row_index: int, key: str, layout: QGridLayout, items: Sequence[str]):
+    def _add_option_combolist(self, row_index: int, key: str, layout: QGridLayout, items: Sequence[str], preview: bool = False):
         """Combo droplist string"""
         editor = DropDownListEdit(self)
         editor.setFixedWidth(self.option_width)
         editor.addItems(items)
+        if preview:
+            set_font_preview(editor)
         # Load selected option
         editor.setCurrentText(str(self.user_setting[self.key_name][key]))
         editor.set_default(self.default_setting[self.key_name][key])
