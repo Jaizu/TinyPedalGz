@@ -215,7 +215,7 @@ def set_style_window(base_font_pt: int) -> str:
             background: transparent;
         }}
         ModuleList > QListView::item:hover {{
-            background: {color_disabled_highlight};
+            background: transparent;
         }}
         ModuleControlItem QPushButton {{
             border-radius: {border_radius_button}em;
@@ -223,36 +223,26 @@ def set_style_window(base_font_pt: int) -> str:
             margin-left: 0.2em;
         }}
         ModuleControlItem {{
+            background: {color_active_base};
             border: 1px solid {color_disabled_highlight};
-            border-radius: {border_radius_button}em;
+            border-radius: 0.5em;
         }}
         ModuleControlItem QLabel {{
             color: {color_active_window_text};
             font-size: {font_pt_item_name}pt;
         }}
         ModuleControlItem #buttonConfig {{
-            font-size: {font_pt_item_button}pt;
+            font-size: {font_pt_item_name}pt;
             color: {color_disabled_window_text};
-            padding: 0 0.2em;
+            min-width: 1.8em;
+            min-height: 1.8em;
+            padding: 0;
+            border: none;
         }}
         ModuleControlItem #buttonToggle {{
-            font-size: {font_pt_item_toggle}pt;
-            font-weight: bold;
-            color: {color_disabled_highlighted_text};
-            background: {color_disabled_highlight};
-            min-width: 2em;
-        }}
-        ModuleControlItem #buttonToggle::checked,
-        ModuleControlItem #buttonConfig::checked {{
-            color: {color_inactive_highlighted_text};
-            background: {color_inactive_highlight};
-        }}
-        ModuleControlItem #buttonToggle::hover,
-        ModuleControlItem #buttonConfig::hover,
-        ModuleControlItem #buttonToggle::checked:hover,
-        ModuleControlItem #buttonConfig::checked:hover {{
-            color: {color_active_highlighted_text};
-            background: {color_active_highlight};
+            background: transparent;
+            border: none;
+            padding: 0;
         }}
 
         /* Preset list (tab) */

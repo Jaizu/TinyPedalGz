@@ -20,8 +20,10 @@
 Module & widget list view
 """
 
-from PySide2.QtCore import QSize, Slot
+from PySide2.QtCore import QRect, QSize, Qt, Slot
+from PySide2.QtGui import QPainter, QPalette
 from PySide2.QtWidgets import (
+    QCheckBox,
     QHBoxLayout,
     QLabel,
     QListView,
@@ -61,7 +63,7 @@ class ModuleList(QWidget):
         self.listbox_module.setMovement(QListView.Static)
         self.listbox_module.setResizeMode(QListView.Adjust)
         self.listbox_module.setWrapping(True)
-        self.listbox_module.setGridSize(QSize(UIScaler.size(22), UIScaler.size(6)))
+        self.listbox_module.setGridSize(QSize(UIScaler.size(18), UIScaler.size(6)))
         self.listbox_module.setSpacing(UIScaler.pixel(4))
         self.create_list()
 
@@ -91,7 +93,7 @@ class ModuleList(QWidget):
         for _name in self.module_control.names:
             module_item = ModuleControlItem(self, _name, self.module_control)
             item = QListWidgetItem()
-            item.setSizeHint(QSize(UIScaler.size(22), UIScaler.size(6)))
+            item.setSizeHint(QSize(UIScaler.size(18), UIScaler.size(6)))
             self.listbox_module.addItem(item)
             self.listbox_module.setItemWidget(item, module_item)
         self.listbox_module.setCurrentRow(0)
@@ -154,29 +156,30 @@ class ModuleControlItem(QWidget):
         self.module_control = module_control
 
         label_name = QLabel(format_module_name(module_name))
+        label_name.setWordWrap(True)
 
-        self.button_toggle = QPushButton("")
+        self.button_toggle = ToggleSwitch()
         self.button_toggle.setObjectName("buttonToggle")
-        self.button_toggle.setCheckable(True)
         self.button_toggle.setChecked(self.is_enabled())
-        # Use "clicked" to avoid trigger with "setChecked"
         self.button_toggle.clicked.connect(self.toggle_state)
 
-        button_config = QPushButton("Config")
+        button_config = QPushButton("⚙")
         button_config.setObjectName("buttonConfig")
+        button_config.setToolTip("Configure plugin")
+        button_config.setAccessibleName("Configure plugin")
         button_config.pressed.connect(self.open_config_dialog)
 
         layout_button = QHBoxLayout()
         layout_button.setContentsMargins(0, 0, 0, 0)
-        layout_button.setSpacing(0)
+        layout_button.setSpacing(UIScaler.pixel(2))
         layout_button.addStretch(1)
         layout_button.addWidget(button_config)
         layout_button.addWidget(self.button_toggle)
 
-        layout_item = QHBoxLayout()
-        layout_item.setContentsMargins(UIScaler.pixel(4), UIScaler.pixel(3), UIScaler.pixel(4), UIScaler.pixel(3))
+        layout_item = QVBoxLayout()
+        layout_item.setContentsMargins(UIScaler.pixel(5), UIScaler.pixel(4), UIScaler.pixel(5), UIScaler.pixel(4))
         layout_item.setSpacing(UIScaler.pixel(2))
-        layout_item.addWidget(label_name)
+        layout_item.addWidget(label_name, stretch=1)
         layout_item.addLayout(layout_button)
         self.setLayout(layout_item)
 
@@ -187,16 +190,11 @@ class ModuleControlItem(QWidget):
     def toggle_state(self):
         """Toggle button state"""
         self.module_control.toggle(self.module_name)
-        self.update_button_text()
+        self._parent.refresh_label()
 
     def update_state(self):
         """Update button toggle state"""
         self.button_toggle.setChecked(self.is_enabled())
-        self.update_button_text()
-
-    def update_button_text(self):
-        """Update button text"""
-        self.button_toggle.setText("ON" if self.is_enabled() else "OFF")
         self._parent.refresh_label()
 
     def open_config_dialog(self):
@@ -216,3 +214,42 @@ class ModuleControlItem(QWidget):
         """Reload module & button state"""
         self.module_control.reload(self.module_name)
         self.update_state()
+
+
+class ToggleSwitch(QCheckBox):
+    """Compact switch with a visible state label"""
+
+    def sizeHint(self) -> QSize:
+        return QSize(UIScaler.size(7.5), UIScaler.size(2.2))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        palette = self.palette()
+        track_width = UIScaler.size(2.6)
+        track_height = UIScaler.size(1.2)
+        knob_size = UIScaler.size(0.9)
+        label_width = self.width() - track_width - UIScaler.pixel(4)
+        track_x = label_width + UIScaler.pixel(4)
+        track_y = (self.height() - track_height) // 2
+
+        painter.setPen(palette.color(QPalette.WindowText))
+        painter.drawText(
+            QRect(0, 0, label_width, self.height()),
+            Qt.AlignLeft | Qt.AlignVCenter,
+            "On" if self.isChecked() else "Off",
+        )
+
+        track_color = palette.color(QPalette.Highlight if self.isChecked() else QPalette.Mid)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(track_color)
+        painter.drawRoundedRect(
+            QRect(track_x, track_y, track_width, track_height),
+            track_height / 2,
+            track_height / 2,
+        )
+
+        knob_x = track_x + track_width - knob_size - UIScaler.pixel(2) if self.isChecked() else track_x + UIScaler.pixel(2)
+        knob_y = track_y + (track_height - knob_size) // 2
+        painter.setBrush(palette.color(QPalette.Base))
+        painter.drawEllipse(QRect(knob_x, knob_y, knob_size, knob_size))
