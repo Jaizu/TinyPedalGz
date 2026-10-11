@@ -89,6 +89,12 @@ def start(log_level: int, single_instance: bool):
     prune_old_logs(path_log, "tinypedal_", ".log", MAX_LOG_FILES - 1)
     set_logging_level(logger, path_log, log_name, log_stream, log_level)
 
+    # Windowed exe has no console, so uncaught errors would vanish silently
+    def _log_exception(exc_type, exc_value, exc_tb):
+        logger.critical("Uncaught exception", exc_info=(exc_type, exc_value, exc_tb))
+
+    sys.excepthook = _log_exception
+
     # Check single instance
     _check_single_instance(single_instance, path_global, FILE.LOG_PID)
 
