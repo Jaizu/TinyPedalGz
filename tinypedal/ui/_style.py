@@ -22,7 +22,7 @@ Style sheet, color palette
 
 import re
 
-from PySide2.QtGui import QGuiApplication, QPalette
+from PySide2.QtGui import QColor, QGuiApplication, QPalette
 from PySide2.QtWidgets import QApplication
 
 
@@ -144,6 +144,13 @@ def set_style_window(base_font_pt: int) -> str:
     color_active_window_text = palette.windowText().color().name()
     color_active_window = palette.window().color().name()
     color_active_base = palette.base().color().name()
+    module_card_color = palette.window().color()
+    module_card_color = (
+        module_card_color.lighter(115)
+        if module_card_color.lightness() < 128
+        else module_card_color.darker(105)
+    ).name()
+    module_card_border = palette.mid().color().name()
     color_active_highlighted_text = palette.highlightedText().color().name()
     color_active_highlight = palette.highlight().color().name()
 
@@ -223,21 +230,20 @@ def set_style_window(base_font_pt: int) -> str:
             margin-left: 0.2em;
         }}
         ModuleControlItem {{
-            background: {color_active_base};
-            border: 1px solid {color_disabled_highlight};
-            border-radius: 0.5em;
+            background: {module_card_color};
+            border: 1px solid {module_card_border};
+            border-radius: 0.45em;
         }}
         ModuleControlItem QLabel {{
             color: {color_active_window_text};
             font-size: {font_pt_item_name}pt;
         }}
         ModuleControlItem #buttonConfig {{
-            font-size: {font_pt_item_name}pt;
-            color: {color_disabled_window_text};
-            min-width: 1.8em;
-            min-height: 1.8em;
+            min-width: 2.3em;
+            min-height: 2.3em;
             padding: 0;
             border: none;
+            background: transparent;
         }}
         ModuleControlItem #buttonToggle {{
             background: transparent;

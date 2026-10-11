@@ -20,8 +20,10 @@
 Module & widget list view
 """
 
-from PySide2.QtCore import QRect, QSize, Qt, Slot
-from PySide2.QtGui import QPainter, QPalette
+import math
+
+from PySide2.QtCore import QPointF, QRect, QRectF, QSize, Qt, Slot
+from PySide2.QtGui import QColor, QPainter, QPalette, QPolygonF
 from PySide2.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -63,7 +65,7 @@ class ModuleList(QWidget):
         self.listbox_module.setMovement(QListView.Static)
         self.listbox_module.setResizeMode(QListView.Adjust)
         self.listbox_module.setWrapping(True)
-        self.listbox_module.setGridSize(QSize(UIScaler.size(18), UIScaler.size(6)))
+        self.listbox_module.setGridSize(QSize(UIScaler.size(18), UIScaler.size(7)))
         self.listbox_module.setSpacing(UIScaler.pixel(4))
         self.create_list()
 
@@ -93,7 +95,7 @@ class ModuleList(QWidget):
         for _name in self.module_control.names:
             module_item = ModuleControlItem(self, _name, self.module_control)
             item = QListWidgetItem()
-            item.setSizeHint(QSize(UIScaler.size(18), UIScaler.size(6)))
+            item.setSizeHint(QSize(UIScaler.size(18), UIScaler.size(7)))
             self.listbox_module.addItem(item)
             self.listbox_module.setItemWidget(item, module_item)
         self.listbox_module.setCurrentRow(0)
@@ -157,29 +159,33 @@ class ModuleControlItem(QWidget):
 
         label_name = QLabel(format_module_name(module_name))
         label_name.setWordWrap(True)
+        label_name.setAlignment(Qt.AlignCenter)
 
         self.button_toggle = ToggleSwitch()
         self.button_toggle.setObjectName("buttonToggle")
         self.button_toggle.setChecked(self.is_enabled())
+        self.button_toggle.setCursor(Qt.PointingHandCursor)
         self.button_toggle.clicked.connect(self.toggle_state)
 
-        button_config = QPushButton("⚙")
+        button_config = GearButton()
         button_config.setObjectName("buttonConfig")
         button_config.setToolTip("Configure plugin")
         button_config.setAccessibleName("Configure plugin")
+        button_config.setCursor(Qt.PointingHandCursor)
         button_config.pressed.connect(self.open_config_dialog)
 
         layout_button = QHBoxLayout()
         layout_button.setContentsMargins(0, 0, 0, 0)
-        layout_button.setSpacing(UIScaler.pixel(2))
         layout_button.addStretch(1)
-        layout_button.addWidget(button_config)
         layout_button.addWidget(self.button_toggle)
+        layout_button.addWidget(button_config)
 
         layout_item = QVBoxLayout()
+        layout_button.addStretch(1)
+        layout_button.setSpacing(UIScaler.pixel(2))
         layout_item.setContentsMargins(UIScaler.pixel(5), UIScaler.pixel(4), UIScaler.pixel(5), UIScaler.pixel(4))
-        layout_item.setSpacing(UIScaler.pixel(2))
-        layout_item.addWidget(label_name, stretch=1)
+        layout_item.setSpacing(UIScaler.pixel(3))
+        layout_item.addWidget(label_name)
         layout_item.addLayout(layout_button)
         self.setLayout(layout_item)
 
@@ -217,39 +223,77 @@ class ModuleControlItem(QWidget):
 
 
 class ToggleSwitch(QCheckBox):
-    """Compact switch with a visible state label"""
+    """Pill-shaped switch with an integrated state label"""
 
     def sizeHint(self) -> QSize:
-        return QSize(UIScaler.size(7.5), UIScaler.size(2.2))
+        return QSize(UIScaler.size(6.2), UIScaler.size(2.1))
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        palette = self.palette()
-        track_width = UIScaler.size(2.6)
-        track_height = UIScaler.size(1.2)
-        knob_size = UIScaler.size(0.9)
-        label_width = self.width() - track_width - UIScaler.pixel(4)
-        track_x = label_width + UIScaler.pixel(4)
-        track_y = (self.height() - track_height) // 2
+        width = self.width()
+        height = self.height()
+        inset = UIScaler.pixel(1)
+        knob_size = height - UIScaler.pixel(6)
+        knob_margin = (height - knob_size) / 2
+        pill = QRectF(inset, inset, width - inset * 2, height - inset * 2)
+        knob_y = (height - knob_size) / 2
 
-        painter.setPen(palette.color(QPalette.WindowText))
-        painter.drawText(
-            QRect(0, 0, label_width, self.height()),
-            Qt.AlignLeft | Qt.AlignVCenter,
-            "On" if self.isChecked() else "Off",
-        )
-
-        track_color = palette.color(QPalette.Highlight if self.isChecked() else QPalette.Mid)
         painter.setPen(Qt.NoPen)
-        painter.setBrush(track_color)
-        painter.drawRoundedRect(
-            QRect(track_x, track_y, track_width, track_height),
-            track_height / 2,
-            track_height / 2,
-        )
+        if self.isChecked():
+            painter.setBrush(QColor("#00D6A3"))
+            painter.drawRoundedRect(pill, height / 2, height / 2)
+            painter.setPen(QColor("#12372F"))
+            knob_x = width - knob_margin - knob_size
+            text_rect = QRect(0, 0, int(knob_x), height)
+            text = "ON"
+        else:
+            painter.setBrush(Qt.transparent)
+            painter.setPen(Qt.white)
+            painter.drawRoundedRect(pill, height / 2, height / 2)
+            knob_x = knob_margin
+            text_rect = QRect(int(knob_x + knob_size), 0, width - int(knob_x + knob_size), height)
+            text = "OFF"
 
-        knob_x = track_x + track_width - knob_size - UIScaler.pixel(2) if self.isChecked() else track_x + UIScaler.pixel(2)
-        knob_y = track_y + (track_height - knob_size) // 2
-        painter.setBrush(palette.color(QPalette.Base))
-        painter.drawEllipse(QRect(knob_x, knob_y, knob_size, knob_size))
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(Qt.white if not self.isChecked() else QColor("#12372F"))
+        painter.drawText(text_rect, Qt.AlignCenter, text)
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(Qt.white)
+        painter.drawEllipse(QRectF(knob_x, knob_y, knob_size, knob_size))
+
+
+class GearButton(QPushButton):
+    """Flat solid gear icon button"""
+
+    def sizeHint(self) -> QSize:
+        return QSize(UIScaler.size(2.3), UIScaler.size(2.3))
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        side = min(self.width(), self.height()) - UIScaler.pixel(4)
+        center = QPointF(self.width() / 2, self.height() / 2)
+        root_radius = side * 0.34
+        outer_radius = side * 0.48
+        points = []
+        for tooth in range(8):
+            for step, radius in enumerate((root_radius, root_radius, outer_radius, outer_radius)):
+                angle = math.radians(tooth * 45 + step * 11.25 - 5.625)
+                points.append(QPointF(
+                    center.x() + math.cos(angle) * radius,
+                    center.y() + math.sin(angle) * radius,
+                ))
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(Qt.white)
+        painter.drawPolygon(QPolygonF(points))
+        painter.setBrush(self.palette().color(QPalette.Window))
+        hole_radius = side * 0.15
+        painter.drawEllipse(QRectF(
+            center.x() - hole_radius,
+            center.y() - hole_radius,
+            hole_radius * 2,
+            hole_radius * 2,
+        ))
