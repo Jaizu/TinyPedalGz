@@ -270,9 +270,14 @@ class AppWindow(QMainWindow):
     def set_tray_icon(self):
         """Set tray icon"""
         logger.info("GUI: loading tray icon")
+        if not QSystemTrayIcon.isSystemTrayAvailable():
+            logger.warning("GUI: system tray not available")
         tray_icon = QSystemTrayIcon(self)
         # Config tray icon
-        tray_icon.setIcon(self.windowIcon())
+        icon = self.windowIcon()
+        if icon.isNull():
+            logger.warning("GUI: tray icon image not found")
+        tray_icon.setIcon(icon)
         tray_icon.setToolTip(self.windowTitle())
         tray_icon.activated.connect(self.tray_doubleclick)
         # Add tray menu

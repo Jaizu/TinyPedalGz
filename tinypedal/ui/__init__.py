@@ -52,7 +52,8 @@ def set_app_locale():
 
 def set_app_icon(root: QApplication):
     """Set APP icon"""
-    root.setWindowIcon(QIcon(FILE.IMAGE_TINYPEDAL))
+    # Absolute path, independent of current working directory
+    root.setWindowIcon(QIcon(os.path.abspath(FILE.IMAGE_TINYPEDAL)))
     # Set window icon for X11/Wayland (workaround)
     if not PLATFORM.WINDOWS:
         root.setDesktopFileName("TinyPedal-overlay")
