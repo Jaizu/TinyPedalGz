@@ -137,7 +137,9 @@ class PaceNotesPlayer(QMediaPlayer):
 
         if self.audio_device:
             return self.setSource(source_url)  # qt6
-        return self.setMedia(source_url)  # qt5
+        from PySide2.QtMultimedia import QMediaContent
+
+        return self.setMedia(QMediaContent(source_url))  # qt5
 
     def set_volume(self, value: int) -> None:
         """Set volume (compatibility)"""

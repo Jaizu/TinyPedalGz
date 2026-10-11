@@ -158,6 +158,8 @@ def build_exe(dist_path: str) -> None:
     BUILD_OPTIONS = {
         "dist_dir": f"{dist_path}/{APP.TINYPEDAL}",
         "excludes": EXCLUDE_MODULES,
+        # Needed by shiboken error handler for QtMultimedia
+        "includes": ["PySide2.QtMultimediaWidgets"],
         "optimize": 2,
         "compressed": 1,
         # "dll_excludes": ["libcrypto-1_1.dll", "libcrypto-3.dll"],
@@ -171,6 +173,7 @@ def build_exe(dist_path: str) -> None:
     IMAGE_FILES = [
         f"{FILE.PATH_IMAGE}CC-BY-SA-4.0.txt",
         FILE.IMAGE_COMPASS,
+        FILE.IMAGE_GEAR,
         FILE.IMAGE_INSTRUMENT,
         FILE.IMAGE_STEERING_WHEEL,
         FILE.IMAGE_WEATHER,
