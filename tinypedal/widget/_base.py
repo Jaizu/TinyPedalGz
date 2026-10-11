@@ -255,7 +255,10 @@ class Overlay(Base):
         Returns:
             QFont object.
         """
-        font = self.font()  # get existing widget font
+        font = QFont(self.font())  # get existing widget font
+        # Inherited style name/hint can override family and cause fallback to default font
+        font.setStyleName("")
+        font.setStyleStrategy(QFont.PreferMatch | QFont.PreferAntialias)
         font.setFamily(name)
         font.setPixelSize(max(int(size), 1))
         if weight:
