@@ -209,9 +209,7 @@ def set_style_window(base_font_pt: int) -> str:
         }}
         ModuleList > QListView::item {{
             border: none;
-            color: {color_active_window_text};
-            min-height: 1.25em;
-            padding: 0.25em 0.25em 0.25em 0;
+            padding: 0;
         }}
         ModuleList > QListView::item:selected {{
             background: transparent;
@@ -223,6 +221,14 @@ def set_style_window(base_font_pt: int) -> str:
             border-radius: {border_radius_button}em;
             height: none;
             margin-left: 0.2em;
+        }}
+        ModuleControlItem {{
+            border: 1px solid {color_disabled_highlight};
+            border-radius: {border_radius_button}em;
+        }}
+        ModuleControlItem QLabel {{
+            color: {color_active_window_text};
+            font-size: {font_pt_item_name}pt;
         }}
         ModuleControlItem #buttonConfig {{
             font-size: {font_pt_item_button}pt;

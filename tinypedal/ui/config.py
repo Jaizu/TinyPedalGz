@@ -74,6 +74,7 @@ from .display_order import DisplayOrder
 
 COLUMN_LABEL = 0  # grid layout column index
 COLUMN_OPTION = 1
+COLUMN_COUNT = 4
 
 
 def get_font_list() -> list[str]:
@@ -246,6 +247,8 @@ class UserConfig(BaseDialog):
 
         # Option dict (key: option editor)
         self.option_edit: dict = {}
+        self.option_label: dict = {}
+        self.option_group_labels: list[QWidget] = []
         option_word_set: set[str] = set()
 
         # Create options
@@ -327,13 +330,13 @@ class UserConfig(BaseDialog):
     def search_options(self, text: str):
         """Search for options"""
         text = text.strip().lower()
-        layout_option = self.layout_option
-        for row_index in range(layout_option.rowCount()):
-            label = layout_option.itemAtPosition(row_index, 0).widget()
-            option = layout_option.itemAtPosition(row_index, 1).widget()
+        for key, option in self.option_edit.items():
+            label = self.option_label[key]
             hidden = text not in label.text().lower()
             label.setHidden(hidden)
             option.setHidden(hidden)
+        for label in self.option_group_labels:
+            label.setHidden(bool(text))
 
     def open_display_order(self):
         """Open display order dialog"""
@@ -408,66 +411,78 @@ class UserConfig(BaseDialog):
     def create_options(self, layout: QGridLayout, option_word_set: set[str]):
         """Create options"""
         option_keys = self.user_setting[self.key_name].keys()
-        row_index = -1
+        row_index = 0
+        option_column = 0
         show_group_title = cfg.application["show_option_group_title"]
         group_name = ""
 
         for key, next_key in zip_longest(option_keys, islice(option_keys, 1, None), fillvalue=""):
-            row_index += 1
             # Group name
             if show_group_title:
                 group_name = option_group_name(key, next_key, group_name)
                 if group_name and group_name != "_same_group":
-                    self._add_group_label(row_index, format_option_name(group_name), layout)
+                    if option_column:
+                        row_index += 1
+                        option_column = 0
+                    self.option_group_labels.append(
+                        self._add_group_label(row_index, format_option_name(group_name), layout)
+                    )
                     row_index += 1
             # Option name
+            current_row = row_index
+            self.option_column_offset = option_column * 2
+            if option_column:
+                row_index += 1
+                option_column = 0
+            else:
+                option_column = 1
             option_name = format_option_name(key)
             option_word_set.update(option_name.split())
-            self._add_option_label(row_index, option_name, layout)
+            self._add_option_label(current_row, option_name, key, layout)
             # Bool
             if re.search(rxp.CFG_BOOL, key):
-                self._add_option_bool(row_index, key, layout)
+                self._add_option_bool(current_row, key, layout)
                 continue
             # Units choice list string
-            if self._choice_match(rxp.CHOICE_UNITS, row_index, key, layout):
+            if self._choice_match(rxp.CHOICE_UNITS, current_row, key, layout):
                 continue
             # Common choice list string
-            if self._choice_match(rxp.CHOICE_COMMON, row_index, key, layout):
+            if self._choice_match(rxp.CHOICE_COMMON, current_row, key, layout):
                 continue
             # Color string
             if re.search(rxp.CFG_COLOR, key):
-                self._add_option_color(row_index, key, layout)
+                self._add_option_color(current_row, key, layout)
                 continue
             # User path string
             if re.search(rxp.CFG_USER_PATH, key):
-                self._add_option_path(row_index, key, layout)
+                self._add_option_path(current_row, key, layout)
                 continue
             # User image file path string
             if re.search(rxp.CFG_USER_IMAGE, key):
-                self._add_option_image(row_index, key, layout)
+                self._add_option_image(current_row, key, layout)
                 continue
             # Font name string
             if re.search(rxp.CFG_FONT_NAME, key):
-                self._add_option_combolist(row_index, key, layout, get_font_list())
+                self._add_option_combolist(current_row, key, layout, get_font_list())
                 continue
             # Heatmap string
             if re.search(rxp.CFG_HEATMAP, key):
-                self._add_option_combolist(row_index, key, layout, cfg.user.heatmap.keys())
+                self._add_option_combolist(current_row, key, layout, cfg.user.heatmap.keys())
                 continue
             # Clock format string
             if re.search(rxp.CFG_CLOCK_FORMAT, key):
-                self._add_option_clock(row_index, key, layout)
+                self._add_option_clock(current_row, key, layout)
                 continue
             # String
             if re.search(rxp.CFG_STRING, key):
-                self._add_option_string(row_index, key, layout)
+                self._add_option_string(current_row, key, layout)
                 continue
             # Int
             if re.search(rxp.CFG_INTEGER, key):
-                self._add_option_integer(row_index, key, layout)
+                self._add_option_integer(current_row, key, layout)
                 continue
             # Float or int
-            self._add_option_float(row_index, key, layout)
+            self._add_option_float(current_row, key, layout)
 
     def _choice_match(self, choice_dict: Mapping, row_index: int, key: str, layout: QGridLayout) -> bool:
         """Choice match"""
@@ -477,17 +492,19 @@ class UserConfig(BaseDialog):
                 return True
         return False
 
-    def _add_group_label(self, row_index: int, option_name: str, layout: QGridLayout):
+    def _add_group_label(self, row_index: int, option_name: str, layout: QGridLayout) -> QWidget:
         """Option group"""
         label = OptionGroup(option_name, self)
         label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(label, row_index, COLUMN_LABEL, 1, 2)
+        layout.addWidget(label, row_index, COLUMN_LABEL, 1, COLUMN_COUNT)
+        return label
 
-    def _add_option_label(self, row_index: int, option_name: str, layout: QGridLayout):
+    def _add_option_label(self, row_index: int, option_name: str, key: str, layout: QGridLayout):
         """Option label"""
         label = QLabel(option_name, self)
         label.setMinimumHeight(UIScaler.size(1.8))
-        layout.addWidget(label, row_index, COLUMN_LABEL)
+        layout.addWidget(label, row_index, COLUMN_LABEL + self.option_column_offset)
+        self.option_label[key] = label
 
     def _add_option_bool(self, row_index: int, key: str, layout: QGridLayout):
         """Bool"""
@@ -497,7 +514,7 @@ class UserConfig(BaseDialog):
         editor.setChecked(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_color(self, row_index: int, key: str, layout: QGridLayout):
@@ -510,7 +527,7 @@ class UserConfig(BaseDialog):
         editor.setText(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_path(self, row_index: int, key: str, layout: QGridLayout):
@@ -521,7 +538,7 @@ class UserConfig(BaseDialog):
         editor.setText(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_image(self, row_index: int, key: str, layout: QGridLayout):
@@ -532,7 +549,7 @@ class UserConfig(BaseDialog):
         editor.setText(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_combolist(self, row_index: int, key: str, layout: QGridLayout, items: Sequence[str]):
@@ -544,7 +561,7 @@ class UserConfig(BaseDialog):
         editor.setCurrentText(str(self.user_setting[self.key_name][key]))
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_clock(self, row_index: int, key: str, layout: QGridLayout):
@@ -555,7 +572,7 @@ class UserConfig(BaseDialog):
         editor.setText(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_string(self, row_index: int, key: str, layout: QGridLayout):
@@ -566,7 +583,7 @@ class UserConfig(BaseDialog):
         editor.setText(self.user_setting[self.key_name][key])
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_integer(self, row_index: int, key: str, layout: QGridLayout):
@@ -578,7 +595,7 @@ class UserConfig(BaseDialog):
         editor.setText(str(self.user_setting[self.key_name][key]))
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
     def _add_option_float(self, row_index: int, key: str, layout: QGridLayout):
@@ -590,7 +607,7 @@ class UserConfig(BaseDialog):
         editor.setText(str(self.user_setting[self.key_name][key]))
         editor.set_default(self.default_setting[self.key_name][key])
         # Add layout
-        layout.addWidget(editor, row_index, COLUMN_OPTION)
+        layout.addWidget(editor, row_index, COLUMN_OPTION + self.option_column_offset)
         self.option_edit[key] = editor
 
 

@@ -20,10 +20,11 @@
 Module & widget list view
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import QSize, Slot
 from PySide2.QtWidgets import (
     QHBoxLayout,
     QLabel,
+    QListView,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
@@ -56,7 +57,12 @@ class ModuleList(QWidget):
 
         # List box
         self.listbox_module = QListWidget(self)
-        self.listbox_module.setAlternatingRowColors(True)
+        self.listbox_module.setViewMode(QListView.IconMode)
+        self.listbox_module.setMovement(QListView.Static)
+        self.listbox_module.setResizeMode(QListView.Adjust)
+        self.listbox_module.setWrapping(True)
+        self.listbox_module.setGridSize(QSize(UIScaler.size(22), UIScaler.size(6)))
+        self.listbox_module.setSpacing(UIScaler.pixel(4))
         self.create_list()
 
         # Button
@@ -85,7 +91,7 @@ class ModuleList(QWidget):
         for _name in self.module_control.names:
             module_item = ModuleControlItem(self, _name, self.module_control)
             item = QListWidgetItem()
-            item.setText(format_module_name(_name))
+            item.setSizeHint(QSize(UIScaler.size(22), UIScaler.size(6)))
             self.listbox_module.addItem(item)
             self.listbox_module.setItemWidget(item, module_item)
         self.listbox_module.setCurrentRow(0)
@@ -147,6 +153,8 @@ class ModuleControlItem(QWidget):
         self.module_name = module_name
         self.module_control = module_control
 
+        label_name = QLabel(format_module_name(module_name))
+
         self.button_toggle = QPushButton("")
         self.button_toggle.setObjectName("buttonToggle")
         self.button_toggle.setCheckable(True)
@@ -158,12 +166,18 @@ class ModuleControlItem(QWidget):
         button_config.setObjectName("buttonConfig")
         button_config.pressed.connect(self.open_config_dialog)
 
+        layout_button = QHBoxLayout()
+        layout_button.setContentsMargins(0, 0, 0, 0)
+        layout_button.setSpacing(0)
+        layout_button.addStretch(1)
+        layout_button.addWidget(button_config)
+        layout_button.addWidget(self.button_toggle)
+
         layout_item = QHBoxLayout()
-        layout_item.setContentsMargins(0, 0, 0, 0)
-        layout_item.addStretch(1)
-        layout_item.setSpacing(0)
-        layout_item.addWidget(button_config)
-        layout_item.addWidget(self.button_toggle)
+        layout_item.setContentsMargins(UIScaler.pixel(4), UIScaler.pixel(3), UIScaler.pixel(4), UIScaler.pixel(3))
+        layout_item.setSpacing(UIScaler.pixel(2))
+        layout_item.addWidget(label_name)
+        layout_item.addLayout(layout_button)
         self.setLayout(layout_item)
 
     def is_enabled(self) -> bool:
