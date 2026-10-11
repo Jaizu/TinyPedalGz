@@ -95,6 +95,13 @@ def start(log_level: int, single_instance: bool):
 
     sys.excepthook = _log_exception
 
+    # Native crashes (e.g. Qt DLL) bypass excepthook; dump Python traceback into log file
+    for handler in logger.handlers:
+        if isinstance(handler, logging.FileHandler) and handler.stream:
+            import faulthandler
+            faulthandler.enable(file=handler.stream, all_threads=True)
+            break
+
     # Check single instance
     _check_single_instance(single_instance, path_global, FILE.LOG_PID)
 
