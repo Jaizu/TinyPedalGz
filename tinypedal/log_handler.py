@@ -21,6 +21,7 @@ Log handler setup
 """
 
 import logging
+import os
 import sys
 
 
@@ -54,11 +55,24 @@ def new_file_handler(_logger: logging.Logger, filepath: str, filename: str) -> l
         File handler.
     """
     format_file = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
-    _handler = logging.FileHandler(f"{filepath}{filename}")
+    _handler = logging.FileHandler(f"{filepath}{filename}", encoding="utf-8")
     _handler.setFormatter(format_file)
     _handler.setLevel(logging.INFO)
     _logger.addHandler(_handler)
     return _handler
+
+
+def prune_old_logs(filepath: str, prefix: str, extension: str, max_files: int) -> None:
+    """Delete oldest log files, keeping at most max_files"""
+    try:
+        names = sorted(
+            name for name in os.listdir(filepath)
+            if name.startswith(prefix) and name.endswith(extension)
+        )  # timestamp in name makes alphabetical order chronological
+        for name in names[:-max_files] if max_files > 0 else names:
+            os.remove(f"{filepath}{name}")
+    except OSError:
+        pass
 
 
 def set_logging_level(_logger: logging.Logger, filepath: str, filename: str, log_stream=None, log_level=1) -> None:
@@ -71,14 +85,16 @@ def set_logging_level(_logger: logging.Logger, filepath: str, filename: str, log
         log_level:
             0 = output only warning or error to console.
             1 = output all log to console.
-            2 = output all log to both console & file.
+            Log file is always written.
     """
     _logger.setLevel(logging.INFO)
     if log_stream is not None:
         new_stream_handler(_logger, log_stream)
-    if log_level >= 1:
+    if log_level >= 1 and sys.stdout is not None:
         new_stream_handler(_logger, sys.stdout)
         _logger.info("LOGGING: output to console")
-    if log_level == 2:
+    try:
         new_file_handler(_logger, filepath, filename)
         _logger.info("LOGGING: output to %s", filename)
+    except OSError:
+        _logger.warning("LOGGING: cannot create log file in %s", filepath)

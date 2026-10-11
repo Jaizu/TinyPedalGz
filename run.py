@@ -188,7 +188,7 @@ def main():
         arguments=("-l", "--log-level"),
         choices=(0, 1, 2),
         default=1,
-        help="set logging output level; '0' error only; '1' all (default); '2' to file",
+        help="set console logging level:; '0' error only; '1' all (default); log file is always written",
     )
     arg_single_instance = add_argument(
         name="single_instance",

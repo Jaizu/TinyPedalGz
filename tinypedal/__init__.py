@@ -44,6 +44,7 @@ if TYPE_CHECKING:
 
 # Create root logger
 logger = logging.getLogger(__package__)
+MAX_LOG_FILES = 10
 
 # Global state & signal
 realtime_state: RealtimeState = None  # type: ignore
@@ -77,8 +78,16 @@ def start(log_level: int, single_instance: bool):
 
     # Config logger
     from .constant import APP, FILE
-    from .log_handler import set_logging_level
-    set_logging_level(logger, path_global, FILE.LOG_APP, log_stream, log_level)
+    from .log_handler import prune_old_logs, set_logging_level
+    # Log file goes to "logs" folder in app root (cwd is set to app root by run.py)
+    path_log = os.path.abspath("logs") + os.sep
+    try:
+        os.makedirs(path_log, exist_ok=True)
+    except OSError:
+        pass  # logging falls back to warning only
+    log_name = time.strftime("tinypedal_%Y-%m-%d_%H-%M-%S.log")
+    prune_old_logs(path_log, "tinypedal_", ".log", MAX_LOG_FILES - 1)
+    set_logging_level(logger, path_log, log_name, log_stream, log_level)
 
     # Check single instance
     _check_single_instance(single_instance, path_global, FILE.LOG_PID)
