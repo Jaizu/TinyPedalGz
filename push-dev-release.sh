@@ -29,6 +29,12 @@ repository=${repository%.git}
 commit=$(git rev-parse HEAD)
 short_sha=${commit:0:12}
 
+printf 'Deleting all existing releases...\n'
+while read -r tag; do
+    [[ -z "$tag" ]] && continue
+    gh release delete "$tag" --repo "$repository" --yes --cleanup-tag
+done < <(gh release list --repo "$repository" --limit 1000 --json tagName --jq '.[].tagName')
+
 git push origin master
 
 printf 'Waiting for GitHub Actions run for commit %s...\n' "$short_sha"
@@ -97,7 +103,7 @@ download_dir=dist/dev
 mkdir -p "$download_dir"
 find "$download_dir" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 
-gh release download "dev-${short_sha}" \
+gh release download dev \
     --repo "$repository" \
     --pattern "TinyPedal-dev-${short_sha}-windows.zip" \
     --dir "$download_dir" \

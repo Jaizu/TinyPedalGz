@@ -41,7 +41,7 @@ jobs:
       run: |
         short_sha="${GITHUB_SHA:0:12}"
         echo "short_sha=${short_sha}" >> $GITHUB_OUTPUT
-        echo "release_tag=dev-${short_sha}" >> $GITHUB_OUTPUT
+        echo "release_tag=dev" >> $GITHUB_OUTPUT
         echo "Development build for commit: ${GITHUB_SHA}"
 
     - name: ZIP Linux file
