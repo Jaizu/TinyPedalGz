@@ -304,6 +304,7 @@ class FILE:
     IMAGE_ICON = f"{PATH_IMAGE}icon{EXT_ICO}"
     IMAGE_TINYPEDAL = f"{PATH_IMAGE}icon{EXT_PNG}"
     IMAGE_COMPASS = f"{PATH_IMAGE}icon_compass{EXT_PNG}"
+    IMAGE_GEAR = f"{PATH_IMAGE}icon_gear{EXT_PNG}"
     IMAGE_INSTRUMENT = f"{PATH_IMAGE}icon_instrument{EXT_PNG}"
     IMAGE_STEERING_WHEEL = f"{PATH_IMAGE}icon_steering_wheel{EXT_PNG}"
     IMAGE_WEATHER = f"{PATH_IMAGE}icon_weather{EXT_PNG}"

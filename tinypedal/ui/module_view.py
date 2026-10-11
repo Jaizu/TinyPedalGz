@@ -20,10 +20,8 @@
 Module & widget list view
 """
 
-import math
-
-from PySide2.QtCore import QPointF, QRect, QRectF, QSize, Qt, Slot
-from PySide2.QtGui import QColor, QPainter, QPalette, QPolygonF
+from PySide2.QtCore import QPoint, QRect, QRectF, QSize, Qt, Slot
+from PySide2.QtGui import QColor, QIcon, QPainter
 from PySide2.QtWidgets import (
     QCheckBox,
     QHBoxLayout,
@@ -38,6 +36,7 @@ from PySide2.QtWidgets import (
 )
 
 from .. import app_signal, cfg
+from ..constant import FILE
 from ..formatter import format_module_name
 from ..module_control import ModuleControl
 from ._common import UIScaler
@@ -66,7 +65,7 @@ class ModuleList(QWidget):
         self.listbox_module.setResizeMode(QListView.Adjust)
         self.listbox_module.setWrapping(True)
         self.listbox_module.setGridSize(QSize(UIScaler.size(18), UIScaler.size(7)))
-        self.listbox_module.setSpacing(UIScaler.pixel(4))
+        self.listbox_module.setSpacing(UIScaler.pixel(0))
         self.create_list()
 
         # Button
@@ -156,6 +155,7 @@ class ModuleControlItem(QWidget):
         self._parent = parent
         self.module_name = module_name
         self.module_control = module_control
+        self.setAttribute(Qt.WA_StyledBackground, True)
 
         label_name = QLabel(format_module_name(module_name))
         label_name.setWordWrap(True)
@@ -180,14 +180,25 @@ class ModuleControlItem(QWidget):
         layout_button.addWidget(self.button_toggle)
         layout_button.addWidget(button_config)
 
-        layout_item = QVBoxLayout()
         layout_button.addStretch(1)
-        layout_button.setSpacing(UIScaler.pixel(2))
+        layout_button.setSpacing(UIScaler.pixel(4))
+
+        layout_item = QVBoxLayout()
         layout_item.setContentsMargins(UIScaler.pixel(5), UIScaler.pixel(4), UIScaler.pixel(5), UIScaler.pixel(4))
         layout_item.setSpacing(UIScaler.pixel(3))
         layout_item.addWidget(label_name)
         layout_item.addLayout(layout_button)
-        self.setLayout(layout_item)
+
+        # Outer margin creates the gap between cards
+        layout_outer = QVBoxLayout()
+        gap = UIScaler.pixel(5)
+        layout_outer.setContentsMargins(gap, gap, gap, gap)
+        self.card = QWidget(self)
+        self.card.setObjectName("moduleCard")
+        self.card.setAttribute(Qt.WA_StyledBackground, True)
+        self.card.setLayout(layout_item)
+        layout_outer.addWidget(self.card)
+        self.setLayout(layout_outer)
 
     def is_enabled(self) -> bool:
         """Is module enabled"""
@@ -228,6 +239,9 @@ class ToggleSwitch(QCheckBox):
     def sizeHint(self) -> QSize:
         return QSize(UIScaler.size(6.2), UIScaler.size(2.1))
 
+    def hitButton(self, pos: QPoint) -> bool:
+        return self.rect().contains(pos)
+
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -266,34 +280,12 @@ class ToggleSwitch(QCheckBox):
 
 
 class GearButton(QPushButton):
-    """Flat solid gear icon button"""
+    """Icon button using PNG from images folder"""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setIcon(QIcon(FILE.IMAGE_GEAR))
+        self.setIconSize(QSize(UIScaler.size(1.8), UIScaler.size(1.8)))
 
     def sizeHint(self) -> QSize:
         return QSize(UIScaler.size(2.3), UIScaler.size(2.3))
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        side = min(self.width(), self.height()) - UIScaler.pixel(4)
-        center = QPointF(self.width() / 2, self.height() / 2)
-        root_radius = side * 0.34
-        outer_radius = side * 0.48
-        points = []
-        for tooth in range(8):
-            for step, radius in enumerate((root_radius, root_radius, outer_radius, outer_radius)):
-                angle = math.radians(tooth * 45 + step * 11.25 - 5.625)
-                points.append(QPointF(
-                    center.x() + math.cos(angle) * radius,
-                    center.y() + math.sin(angle) * radius,
-                ))
-        painter.setPen(Qt.NoPen)
-        painter.setBrush(Qt.white)
-        painter.drawPolygon(QPolygonF(points))
-        painter.setBrush(self.palette().color(QPalette.Window))
-        hole_radius = side * 0.15
-        painter.drawEllipse(QRectF(
-            center.x() - hole_radius,
-            center.y() - hole_radius,
-            hole_radius * 2,
-            hole_radius * 2,
-        ))

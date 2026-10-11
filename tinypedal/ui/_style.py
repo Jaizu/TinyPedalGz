@@ -230,9 +230,12 @@ def set_style_window(base_font_pt: int) -> str:
             margin-left: 0.2em;
         }}
         ModuleControlItem {{
+            background: transparent;
+        }}
+        ModuleControlItem #moduleCard {{
             background: {module_card_color};
-            border: 1px solid {module_card_border};
-            border-radius: 0.45em;
+            border: 2px solid {module_card_border};
+            border-radius: 0.8em;
         }}
         ModuleControlItem QLabel {{
             color: {color_active_window_text};
