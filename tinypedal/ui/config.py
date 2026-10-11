@@ -22,14 +22,13 @@ Config dialog
 
 from __future__ import annotations
 
-import os
 import re
 import time
 from itertools import islice, zip_longest
 from typing import Callable, Mapping, Sequence
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QFont, QFontDatabase
+from PySide2.QtGui import QFont
 from PySide2.QtWidgets import (
     QComboBox,
     QCompleter,
@@ -46,7 +45,7 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
-from .. import cfg, paths
+from .. import cfg
 from .. import regex_pattern as rxp
 from ..constant import CONFIG
 from ..formatter import format_option_name
@@ -78,34 +77,9 @@ COLUMN_OPTION = 1
 COLUMN_COUNT = 4
 
 
-def get_system_font_list() -> list[str]:
-    """Get all available system font families list"""
-    if os.getenv("PYSIDE_OVERRIDE") == "6":  # no instance in qt6
-        return QFontDatabase.families()  # type: ignore[call-arg]
-    return QFontDatabase().families()
-
-
-def get_font_list(extra: str = "") -> list[str]:
-    """Get font list shown in dropdown, filtered by user fonts.txt (one name per line)
-
-    fonts.txt is generated from system fonts on first use; delete lines to hide fonts.
-    """
-    system_fonts = get_system_font_list()
-    filepath = f"{paths.global_config_path()}fonts.txt"
-    try:
-        if not os.path.exists(filepath):
-            with open(filepath, "w", encoding="utf-8") as fobj:
-                fobj.write("\n".join(system_fonts) + "\n")
-            fonts = system_fonts
-        else:
-            with open(filepath, "r", encoding="utf-8") as fobj:
-                allowed = {line.strip() for line in fobj if line.strip()}
-            fonts = [name for name in system_fonts if name in allowed] or system_fonts
-    except OSError:
-        fonts = system_fonts
-    if extra and extra not in fonts:  # keep currently used font selectable
-        fonts = [extra, *fonts]
-    return fonts
+def get_font_list() -> list[str]:
+    """Get supported font list shown in dropdown"""
+    return list(rxp.SUPPORTED_FONTS)
 
 
 def set_font_preview(combo: QComboBox, start: int = 0):
@@ -496,7 +470,7 @@ class UserConfig(BaseDialog):
             if re.search(rxp.CFG_FONT_NAME, key):
                 self._add_option_combolist(
                     current_row, key, layout,
-                    get_font_list(str(self.user_setting[self.key_name][key])),
+                    get_font_list(),
                     preview=True,
                 )
                 continue

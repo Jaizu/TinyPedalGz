@@ -208,6 +208,22 @@ ABBR_PATTERN = "|".join(
 )
 
 # Font weight
+SUPPORTED_FONTS = (
+    "Roboto",
+    "Inter",
+    "Ubuntu",
+    "Roboto Condensed",
+    "Barlow Condensed",
+    "DIN",
+    "D-DIN",
+    "Titillium Web",
+    "Rajdhani",
+    "IBM Plex Sans",
+    "Orbitron",
+    "Arial",
+)
+DEFAULT_FONT = "Arial"
+
 FONT_WEIGHT_MAP = MappingProxyType({
     "Thin": QFont.Thin,
     "Extra Light": QFont.ExtraLight,

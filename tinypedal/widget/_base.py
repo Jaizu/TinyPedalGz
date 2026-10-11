@@ -33,7 +33,7 @@ from .. import app_signal, overlay_signal, realtime_state
 from ..configuration import Configuration
 from ..constant import APP
 from ..formatter import format_module_name
-from ..regex_pattern import FONT_WEIGHT_MAP
+from ..regex_pattern import DEFAULT_FONT, FONT_WEIGHT_MAP, SUPPORTED_FONTS
 from ._common import FontMetrics, MousePosition
 from ._painter import RawImage, RawText
 
@@ -258,8 +258,14 @@ class Overlay(Base):
         font = QFont(self.font())  # get existing widget font
         # Inherited style name/hint can override family and cause fallback to default font
         font.setStyleName("")
-        font.setStyleStrategy(QFont.PreferMatch | QFont.PreferAntialias)
-        font.setFamily(name)
+        # PySide2 may reject combined enum flags; fall back to single flag
+        try:
+            font.setStyleStrategy(
+                QFont.StyleStrategy(int(QFont.PreferMatch) | int(QFont.PreferAntialias))
+            )
+        except (TypeError, ValueError):
+            font.setStyleStrategy(QFont.PreferAntialias)
+        font.setFamily(name if name in SUPPORTED_FONTS else DEFAULT_FONT)
         font.setPixelSize(max(int(size), 1))
         if weight:
             font.setWeight(FONT_WEIGHT_MAP[weight])
