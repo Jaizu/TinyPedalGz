@@ -64,6 +64,7 @@ GLOBAL_DEFAULT = {
         "enable_api_selection_from_preset": True,
         "enable_auto_backup_car_setup": False,
         "enable_legacy_api_selection": False,
+        "enable_test_mode": False,
     },
     "user_path": {
         "settings_path": paths.default_config_path("settings/"),

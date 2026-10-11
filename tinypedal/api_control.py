@@ -72,16 +72,29 @@ class APIControl:
             name = cfg.selected_api
 
         enable_legacy = cfg.telemetry["enable_legacy_api_selection"]
+        test_mode = cfg.telemetry["enable_test_mode"]
+        if test_mode:
+            name = API.NAME_LMU  # mock data is LMU-shaped
         if not self._available_api or self._enable_legacy != enable_legacy:
             self._enable_legacy = enable_legacy
             self._available_api = _get_available_api(enable_legacy)
             self._same_api_loaded = False
         else:
             # Do not create new instance if same API already loaded
-            self._same_api_loaded = bool(self._api is not None and self._api.NAME == name)
+            self._same_api_loaded = bool(
+                self._api is not None
+                and self._api.NAME == name
+                and isinstance(self._api, adapter.MockLMU) == test_mode
+            )
 
         if self._same_api_loaded:
             logger.info("CONNECTING: same API detected, fast restarting")
+            return
+
+        if test_mode:
+            logger.info("CONNECTING: test mode enabled, using simulated data")
+            self._api = adapter.MockLMU()
+            self._same_api_loaded = False
             return
 
         _api = self._available_api.get(name)

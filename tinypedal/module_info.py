@@ -465,8 +465,10 @@ class VehicleDataSet:
     qualifyOverall: int = 0
     qualifyInClass: int = 0
     driverName: str = ""
+    carNumber: str = ""
     brandName: str = ""
     vehicleName: str = ""
+
     vehicleClass: str = ""
     overallAheadIndex: int = -1
     classAheadIndex: int = -1

@@ -436,6 +436,10 @@ class APIMenu(QMenu):
         self.legacy_api.setCheckable(True)
         self.legacy_api.triggered.connect(self.toggle_legacy_api)
 
+        self.test_mode = self.addAction("Enable Test Mode (simulated data)")
+        self.test_mode.setCheckable(True)
+        self.test_mode.triggered.connect(self.toggle_test_mode)
+
         self.carsetup_backup = self.addAction("Enable Auto Backup Car Setup")
         self.carsetup_backup.setCheckable(True)
         self.carsetup_backup.triggered.connect(self.toggle_carsetup_backup)
@@ -457,6 +461,7 @@ class APIMenu(QMenu):
         self.api_selection.setChecked(cfg.telemetry["enable_api_selection_from_preset"])
         self.carsetup_backup.setChecked(cfg.telemetry["enable_auto_backup_car_setup"])
         self.legacy_api.setChecked(cfg.telemetry["enable_legacy_api_selection"])
+        self.test_mode.setChecked(cfg.telemetry["enable_test_mode"])
 
     def toggle_api_selection(self):
         """Toggle API selection mode"""
@@ -479,6 +484,13 @@ class APIMenu(QMenu):
         cfg.save(config_type=CONFIG.TYPE_CONFIG)
         menu_restart_api()
         self.reset_menu()
+
+    def toggle_test_mode(self):
+        """Toggle test mode (simulated data), reload modules to apply"""
+        enabled = cfg.telemetry["enable_test_mode"]
+        cfg.telemetry["enable_test_mode"] = not enabled
+        cfg.save(config_type=CONFIG.TYPE_CONFIG)
+        menu_reload_only()
 
     def open_config_api(self):
         """Config API"""

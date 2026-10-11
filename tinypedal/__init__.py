@@ -300,8 +300,8 @@ def _save_pid_file(filepath: str, filename: str):
         f.write(pid_str)
 
 
-def _is_pid_exist(filepath: str, filename: str) -> bool:
-    """Check and verify PID existence"""
+def _find_running_pid(filepath: str, filename: str) -> int | None:
+    """Get PID of verified running TinyPedal instance, None if not running"""
     import psutil
     try:
         # Load last recorded PID and creation time from pid log file
@@ -312,14 +312,32 @@ def _is_pid_exist(filepath: str, filename: str) -> bool:
         pid_last_create_time = pid[1]
         # Verify if last PID is running and belongs to TinyPedal
         if psutil.pid_exists(pid_last) and str(psutil.Process(pid_last).create_time()) == pid_last_create_time:
-            return True  # already running
+            return pid_last  # already running
     except (ProcessLookupError, psutil.NoSuchProcess, ValueError, IndexError, FileNotFoundError):
         logger.info("PID not found or invalid")
-    return False  # no running
+    return None  # no running
+
+
+def _close_old_instance(pid: int):
+    """Terminate previous instance, force kill if it does not exit in time"""
+    import psutil
+    if pid == os.getpid():
+        return
+    logger.info("Closing previous instance (PID %s)", pid)
+    try:
+        proc = psutil.Process(pid)
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except psutil.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
+    except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired) as err:
+        logger.warning("Unable to close previous instance: %s", err)
 
 
 def _check_single_instance(single_mode: bool, filepath: str, filename: str):
-    """Check single instance, True=passed check, False=failed check"""
+    """Check single instance, close previous instance if found"""
     logger.info("Single instance mode: %s", "ON" if single_mode else "OFF")
     # Multi-instance mode enabled
     if not single_mode:
@@ -329,19 +347,11 @@ def _check_single_instance(single_mode: bool, filepath: str, filename: str):
         os.environ.pop("TINYPEDAL_RESTART", None)
         _save_pid_file(filepath, filename)
         return
-    # Check existing PID file
-    if not _is_pid_exist(filepath, filename):
-        _save_pid_file(filepath, filename)
-        return
-    # Cancel & quit
-    from . import ui
-
-    message = (
-        "TinyPedal is already running.\n\n"
-        "Only one TinyPedal may be run at a time.\n"
-        "Check system tray for hidden icon."
-    )
-    ui.cancel(message)
+    # Replace existing instance
+    old_pid = _find_running_pid(filepath, filename)
+    if old_pid is not None:
+        _close_old_instance(old_pid)
+    _save_pid_file(filepath, filename)
 
 
 def _clear_environment():

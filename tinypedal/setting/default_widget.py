@@ -2538,6 +2538,7 @@ WIDGET_DEFAULT = {
         "enable_auto_font_offset": True,
         "font_offset_vertical": 0,
         "opacity": 0.9,
+        "enable_alternative_layout": False,
         "bar_padding": 0.2,
         "bar_gap": 1,
         "enable_multi_class_split_mode": True,

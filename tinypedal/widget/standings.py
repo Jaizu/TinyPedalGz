@@ -33,6 +33,12 @@ from ._painter import DeltaLapTime, MultiCompounds
 class Realtime(Overlay):
     """Draw widget"""
 
+    def __new__(cls, config, widget_name):
+        if config.user.setting[widget_name].get("enable_alternative_layout"):
+            from .standings_alt import Realtime as AltRealtime
+            return AltRealtime(config, widget_name)  # not a subclass, __init__ is skipped
+        return super().__new__(cls)
+
     def __init__(self, config, widget_name):
         # Assign base setting
         super().__init__(config, widget_name)

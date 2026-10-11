@@ -26,7 +26,15 @@ import random
 import re
 from functools import lru_cache
 
-from .regex_pattern import ABBR_PATTERN, rex_invalid_char
+from .regex_pattern import ABBR_PATTERN, rex_car_number, rex_invalid_char
+
+
+def extract_car_number(name: str) -> str:
+    """Extract car number from team name (ex. 'Some Team #23' -> '#23')"""
+    match_obj = rex_car_number.search(name)
+    if match_obj is None:
+        return ""
+    return f"#{match_obj.group(1)}"
 
 
 def uppercase_abbr(name: str) -> str:

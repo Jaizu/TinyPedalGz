@@ -23,11 +23,13 @@ API data adapter
 from ._connector import APIDataReader, Connector
 from .acc_connector import SimACC
 from .lmu_connector import SimLMU
+from .mock_connector import MockLMU
 from .rf2_connector import SimLMULegacy, SimRF2
 
 __all__ = (
     "APIDataReader",
     "Connector",
+    "MockLMU",
     "SimACC",
     "SimLMU",
     "SimLMULegacy",

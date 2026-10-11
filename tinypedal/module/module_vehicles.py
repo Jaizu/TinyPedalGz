@@ -25,6 +25,7 @@ from __future__ import annotations
 from .. import api, minfo, realtime_state
 from .. import calculation as calc
 from ..constant import DATA
+from ..formatter import extract_car_number
 from ..module_info import VehicleDataSet, VehiclesInfo
 from ..userfile.brands import select_brand_name
 from ..validator import state_timer
@@ -256,6 +257,7 @@ def update_vehicle_data(
             data.numPitStops = api.read.vehicle.number_pitstops(index, api.read.vehicle.number_penalties(index))
             data.pitRequested = api.read.vehicle.pit_request(index)
             data.driverName = api.read.vehicle.driver_name(index)
+            data.carNumber = extract_car_number(api.read.vehicle.team_name(index))
             data.vehicleName = api.read.vehicle.vehicle_model(index)
             data.brandName = select_brand_name(data.vehicleName)
             data.vehicleClass = api.read.vehicle.class_name(index)
